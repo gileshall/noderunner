@@ -1,0 +1,16 @@
+{
+  "noderunner_run.project": "YOUR-PROJECT",
+  "noderunner_run.region": "us-central1",
+  "noderunner_run.image": "us-docker.pkg.dev/YOUR-PROJECT/noderunner/samtools-flagstat:latest",
+  "noderunner_run.mounts": [
+    "your-input-bucket",
+    "hns:your-output-bucket"
+  ],
+  "noderunner_run.env_vars": [
+    "INPUT_BUCKET=your-input-bucket",
+    "OUTPUT_BUCKET=your-output-bucket",
+    "BAM_PATH=path/to/sample.bam"
+  ],
+  "noderunner_run.machine_type": "n2-highmem-8",
+  "noderunner_run.boot_disk_gb": 500
+}

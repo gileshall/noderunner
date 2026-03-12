@@ -1,0 +1,7 @@
+version: 1.2
+
+workflows:
+  - name: noderunner-run
+    subclass: WDL
+    primaryDescriptorPath: /wdl/noderunner_run.wdl
+    topic: Run a Docker container on an ephemeral Dataproc single-node cluster with gcsfuse mounts
