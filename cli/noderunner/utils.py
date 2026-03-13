@@ -102,6 +102,16 @@ def _metadata_get(path: str) -> Optional[str]:
         return None
 
 
+def detect_account() -> str:
+    """Detect the active gcloud account."""
+    out = run_cmd(["gcloud", "config", "get-value", "account"], "gcloud-account", timeout=10)
+    account = out.strip()
+    if not account or account == "(unset)":
+        raise RuntimeError("No active gcloud account.")
+    log.info("Using account: %s", account)
+    return account
+
+
 def detect_project() -> Optional[str]:
     """Auto-detect GCP project from metadata server or gcloud config."""
     val = _metadata_get("project/project-id")

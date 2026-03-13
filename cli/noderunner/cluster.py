@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 from noderunner.mounts import MountSpec, build_metadata_string
-from noderunner.utils import generate_cluster_name, run_cmd
+from noderunner.utils import detect_account, generate_cluster_name, run_cmd
 
 log = logging.getLogger("noderunner")
 
@@ -85,6 +85,13 @@ class NoderunnerCluster:
         self.state = ClusterState.UNBORN
         self._start_time: Optional[float] = None
         self._init_gcs: Optional[str] = None
+        self._account: Optional[str] = None
+
+    @property
+    def account(self) -> str:
+        if self._account is None:
+            self._account = detect_account()
+        return self._account
 
     def __enter__(self) -> NoderunnerCluster:
         self._start_time = time.time()
@@ -166,6 +173,7 @@ class NoderunnerCluster:
             f"--master-boot-disk-size={self.config.boot_disk_size_gb}",
             f"--master-boot-disk-type={self.config.boot_disk_type}",
             f"--max-age={self.config.max_age_minutes}m",
+            f"--service-account={self.account}",
         ]
 
         if self.mounts:
@@ -271,6 +279,7 @@ class NoderunnerCluster:
                     "gcloud", "dataproc", "clusters", "delete", "--quiet", "--async",
                     f"--project={self.config.project}",
                     f"--region={self.config.region}",
+                    f"--account={self.account}",
                     self.name,
                 ],
                 "cluster-destroy",
