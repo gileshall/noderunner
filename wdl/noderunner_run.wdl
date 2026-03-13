@@ -2,7 +2,7 @@ version 1.0
 
 task noderunner_run_task {
   input {
-    String project
+    String? project
     String image
 
     String? region
@@ -39,7 +39,7 @@ task noderunner_run_task {
     gcloud auth list
 
     python -m noderunner run \
-      --project ~{project} \
+      ~{"--project " + project} \
       ~{"--region " + region} \
       --image ~{image} \
       --machine-type ~{machine_type} \
@@ -71,7 +71,7 @@ task noderunner_run_task {
 
 workflow noderunner_run {
   input {
-    String project
+    String? project
     String image
 
     String? region

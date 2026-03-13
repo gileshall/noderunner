@@ -12,7 +12,7 @@ from noderunner import __version__
 from noderunner.cluster import ClusterConfig
 from noderunner.mounts import parse_mount
 from noderunner.run import run_workflow
-from noderunner.utils import detect_region, parse_output_spec
+from noderunner.utils import detect_project, detect_region, parse_output_spec
 
 log = logging.getLogger("noderunner")
 
@@ -36,7 +36,7 @@ def cli(log_level: str) -> None:
 
 
 @cli.command()
-@click.option("--project", required=True, help="GCP project ID.")
+@click.option("--project", default=None, help="GCP project ID. Auto-detected from GCE metadata or gcloud config if omitted.")
 @click.option("--region", default=None, help="GCP region. Auto-detected from GCE metadata if omitted.")
 @click.option("--image", required=True, help="Docker image to run (Artifact Registry or GCR).")
 @click.option("--mount", "mount_specs", multiple=True, help="GCS bucket to mount. Repeat for multiple.")
@@ -77,6 +77,15 @@ def run(
     dry_run: bool,
 ) -> None:
     """Create a Dataproc cluster, run a Docker container, then destroy the cluster."""
+    # Auto-detect project if not provided
+    if not project:
+        project = detect_project()
+        if not project:
+            raise click.UsageError(
+                "Could not auto-detect project. Provide --project explicitly."
+            )
+        log.info("Using auto-detected project: %s", project)
+
     # Auto-detect region if not provided
     if not region:
         region = detect_region()

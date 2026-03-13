@@ -1,12 +1,12 @@
 {
-  "noderunner_run.project": "YOUR-PROJECT",
-  "noderunner_run.image": "us-docker.pkg.dev/YOUR-PROJECT/noderunner/file-ops:latest",
+  "noderunner_run.image": "us-docker.pkg.dev/broad-dsde-methods/noderunner/file-ops:latest",
   "noderunner_run.mounts": [
-    "your-input-bucket",
-    "your-output-bucket"
+    "fc-secure-98e2437e-f3e7-4f92-a610-acd639085f73"
   ],
   "noderunner_run.env_vars": [
-    "INPUT_BUCKET=your-input-bucket",
-    "OUTPUT_BUCKET=your-output-bucket"
-  ]
+    "INPUT_BUCKET=fc-secure-98e2437e-f3e7-4f92-a610-acd639085f73",
+    "OUTPUT_BUCKET=fc-secure-98e2437e-f3e7-4f92-a610-acd639085f73"
+  ],
+  "noderunner_run.no_external_ip": false,
+  "noderunner_run.max_age_minutes": 30
 }
