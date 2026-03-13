@@ -39,6 +39,7 @@ class ClusterConfig:
 
     project: str
     region: str
+    staging_bucket: str
     machine_type: str = "n2-highmem-8"
     boot_disk_size_gb: int = 500
     boot_disk_type: str = "pd-ssd"
@@ -49,7 +50,6 @@ class ClusterConfig:
     cluster_name: Optional[str] = None
     image_version: str = "2.2-debian12"
     custom_image: Optional[str] = None
-    staging_bucket: Optional[str] = None
 
 
 class ClusterState(Enum):
@@ -116,36 +116,11 @@ class NoderunnerCluster:
     # ------------------------------------------------------------------
 
     def _resolve_staging_bucket(self) -> str:
-        """Return the staging bucket URI (gs://...), creating it if needed."""
-        if self.config.staging_bucket:
-            bucket = self.config.staging_bucket
-            if not bucket.startswith("gs://"):
-                bucket = f"gs://{bucket}"
-            return bucket
-
-        bucket_name = f"noderunner-staging-{self.config.project}"
-        bucket_uri = f"gs://{bucket_name}"
-
-        # Check if it exists
-        try:
-            run_cmd(
-                ["gsutil", "ls", bucket_uri],
-                "check-staging-bucket",
-                timeout=30,
-            )
-            return bucket_uri
-        except Exception:
-            pass
-
-        # Create it
-        self._log("Creating staging bucket: %s", bucket_uri)
-        run_cmd(
-            ["gsutil", "mb", "-p", self.config.project,
-             "-l", self.config.region, bucket_uri],
-            "create-staging-bucket",
-            timeout=30,
-        )
-        return bucket_uri
+        """Return the staging bucket URI (gs://...)."""
+        bucket = self.config.staging_bucket
+        if not bucket.startswith("gs://"):
+            bucket = f"gs://{bucket}"
+        return bucket
 
     def _stage_init_script(self) -> None:
         """Upload gcsfuse.sh to the staging bucket if not already present."""

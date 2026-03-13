@@ -53,7 +53,7 @@ def cli(log_level: str) -> None:
 @click.option("--custom-image", default=None, help="Full URI of a pre-baked Dataproc custom image.")
 @click.option("--env", "env_vars", multiple=True, help="Environment variable for docker run (-e KEY=VALUE). Repeat for multiple.")
 @click.option("--output", "output_specs", multiple=True, help="Output copy spec: gs://src/path:local_dest. Repeat for multiple.")
-@click.option("--staging-bucket", default=None, help="GCS bucket for staging init script. Auto-created if omitted.")
+@click.option("--staging-bucket", required=True, help="GCS bucket for staging the init script (e.g. gs://my-bucket or my-bucket).")
 @click.option("--dry-run", is_flag=True, default=False, help="Print gcloud commands without executing.")
 def run(
     project: str,
@@ -73,7 +73,7 @@ def run(
     custom_image: str | None,
     env_vars: tuple[str, ...],
     output_specs: tuple[str, ...],
-    staging_bucket: str | None,
+    staging_bucket: str,
     dry_run: bool,
 ) -> None:
     """Create a Dataproc cluster, run a Docker container, then destroy the cluster."""
@@ -105,6 +105,7 @@ def run(
     config = ClusterConfig(
         project=project,
         region=region,
+        staging_bucket=staging_bucket,
         machine_type=machine_type,
         boot_disk_size_gb=boot_disk_size,
         boot_disk_type=boot_disk_type,
@@ -115,7 +116,6 @@ def run(
         cluster_name=cluster_name,
         image_version=image_version,
         custom_image=custom_image,
-        staging_bucket=staging_bucket,
     )
 
     try:

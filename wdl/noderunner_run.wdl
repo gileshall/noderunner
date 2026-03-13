@@ -4,6 +4,7 @@ task noderunner_run_task {
   input {
     String? project
     String image
+    String staging_bucket
 
     String? region
     Array[String] mounts       = []
@@ -42,6 +43,7 @@ task noderunner_run_task {
       ~{"--project " + project} \
       ~{"--region " + region} \
       --image ~{image} \
+      --staging-bucket ~{staging_bucket} \
       --machine-type ~{machine_type} \
       --boot-disk-size ~{boot_disk_gb} \
       --local-ssd ~{local_ssds} \
@@ -73,6 +75,7 @@ workflow noderunner_run {
   input {
     String? project
     String image
+    String staging_bucket
 
     String? region
 
@@ -101,6 +104,7 @@ workflow noderunner_run {
       project         = project,
       region          = region,
       image           = image,
+      staging_bucket  = staging_bucket,
       mounts          = mounts,
       args            = args,
       output_specs    = output_specs,

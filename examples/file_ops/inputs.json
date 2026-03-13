@@ -1,5 +1,6 @@
 {
   "noderunner_run.image": "us-docker.pkg.dev/broad-dsde-methods/noderunner/file-ops:latest",
+  "noderunner_run.staging_bucket": "fc-secure-98e2437e-f3e7-4f92-a610-acd639085f73",
   "noderunner_run.mounts": [
     "fc-secure-98e2437e-f3e7-4f92-a610-acd639085f73"
   ],

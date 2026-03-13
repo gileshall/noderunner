@@ -11,7 +11,7 @@ class TestBuildCreateCommand:
 
     def _make_cluster(self, **overrides) -> NoderunnerCluster:
         mounts = overrides.pop("mounts", [])
-        defaults = dict(project="test-project", region="us-central1")
+        defaults = dict(project="test-project", region="us-central1", staging_bucket="gs://test-bucket")
         defaults.update(overrides)
         config = ClusterConfig(**defaults)
         cluster = NoderunnerCluster(config, mounts, dry_run=True)
