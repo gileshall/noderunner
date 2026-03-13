@@ -1,0 +1,4 @@
+.*/
+*.md
+*egg*
+deploy.sh

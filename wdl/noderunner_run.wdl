@@ -3,9 +3,9 @@ version 1.0
 task noderunner_run_task {
   input {
     String project
-    String region
     String image
 
+    String? region
     Array[String] mounts       = []
     Array[String] args         = []
     Array[String] output_specs = []
@@ -40,7 +40,7 @@ task noderunner_run_task {
 
     python -m noderunner run \
       --project ~{project} \
-      --region ~{region} \
+      ~{"--region " + region} \
       --image ~{image} \
       --machine-type ~{machine_type} \
       --boot-disk-size ~{boot_disk_gb} \
@@ -72,8 +72,9 @@ task noderunner_run_task {
 workflow noderunner_run {
   input {
     String project
-    String region
     String image
+
+    String? region
 
     Array[String] mounts       = []
     Array[String] args         = []

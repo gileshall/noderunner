@@ -12,7 +12,6 @@ workspace, then submit with an inputs JSON like this:
 ```json
 {
   "noderunner_run.project": "my-project",
-  "noderunner_run.region": "us-central1",
   "noderunner_run.image": "us-docker.pkg.dev/my-project/noderunner/file-ops:latest",
   "noderunner_run.mounts": [
     "my-input-bucket",
@@ -116,8 +115,8 @@ Signal HNS in mount specs with the `hns:` prefix: `--mount hns:my-output-bucket`
 | Input | Type | Default | Description |
 |-------|------|---------|-------------|
 | `project` | String | required | GCP project |
-| `region` | String | required | GCP region |
 | `image` | String | required | Docker image to run |
+| `region` | String? | None | GCP region. Auto-detected from the task VM if omitted. |
 | `mounts` | Array[String] | `[]` | GCS bucket mount specs |
 | `args` | Array[String] | `[]` | Args passed to container |
 | `output_specs` | Array[String] | `[]` | `gs://src:local_dst` output specs |
@@ -142,7 +141,7 @@ noderunner run [OPTIONS]
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--project` | str | required | GCP project ID |
-| `--region` | str | required | GCP region |
+| `--region` | str | auto-detected | GCP region. Detected from GCE metadata if omitted. |
 | `--image` | str | required | Docker image (Artifact Registry or GCR) |
 | `--mount` | str | (multi) | GCS bucket mount spec. Repeat for multiple. |
 | `--arg` | str | (multi) | Container argument. Repeat for multiple. |

@@ -12,7 +12,7 @@ from noderunner import __version__
 from noderunner.cluster import ClusterConfig
 from noderunner.mounts import parse_mount
 from noderunner.run import run_workflow
-from noderunner.utils import parse_output_spec
+from noderunner.utils import detect_region, parse_output_spec
 
 log = logging.getLogger("noderunner")
 
@@ -37,7 +37,7 @@ def cli(log_level: str) -> None:
 
 @cli.command()
 @click.option("--project", required=True, help="GCP project ID.")
-@click.option("--region", required=True, help="GCP region.")
+@click.option("--region", default=None, help="GCP region. Auto-detected from GCE metadata if omitted.")
 @click.option("--image", required=True, help="Docker image to run (Artifact Registry or GCR).")
 @click.option("--mount", "mount_specs", multiple=True, help="GCS bucket to mount. Repeat for multiple.")
 @click.option("--arg", "container_args", multiple=True, help="Argument passed to the Docker container. Repeat for multiple.")
@@ -57,7 +57,7 @@ def cli(log_level: str) -> None:
 @click.option("--dry-run", is_flag=True, default=False, help="Print gcloud commands without executing.")
 def run(
     project: str,
-    region: str,
+    region: str | None,
     image: str,
     mount_specs: tuple[str, ...],
     container_args: tuple[str, ...],
@@ -77,6 +77,15 @@ def run(
     dry_run: bool,
 ) -> None:
     """Create a Dataproc cluster, run a Docker container, then destroy the cluster."""
+    # Auto-detect region if not provided
+    if not region:
+        region = detect_region()
+        if not region:
+            raise click.UsageError(
+                "Could not auto-detect region. Provide --region explicitly."
+            )
+        log.info("Using auto-detected region: %s", region)
+
     # Parse mounts
     mounts = [parse_mount(m) for m in mount_specs]
 

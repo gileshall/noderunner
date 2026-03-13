@@ -87,26 +87,59 @@ def generate_cluster_name() -> str:
 # project detection (ported from hailrunner)
 # ---------------------------------------------------------------------------
 
-def detect_project() -> Optional[str]:
-    """Auto-detect GCP project from metadata server or gcloud config."""
-    # GCE metadata server — works inside any GCE VM / Cromwell container
+def _metadata_get(path: str) -> Optional[str]:
+    """Fetch a value from the GCE metadata server. Returns None on failure."""
     try:
         import urllib.request
         req = urllib.request.Request(
-            "http://metadata.google.internal/computeMetadata/v1/project/project-id",
+            f"http://metadata.google.internal/computeMetadata/v1/{path}",
             headers={"Metadata-Flavor": "Google"},
         )
         resp = urllib.request.urlopen(req, timeout=2)
         val = resp.read().decode().strip()
-        if val:
-            log.info("Detected project from GCE metadata: %s", val)
-            return val
+        return val if val else None
     except Exception:
-        pass
+        return None
+
+
+def detect_project() -> Optional[str]:
+    """Auto-detect GCP project from metadata server or gcloud config."""
+    val = _metadata_get("project/project-id")
+    if val:
+        log.info("Detected project from GCE metadata: %s", val)
+        return val
     # gcloud config as last resort
     try:
         out = subprocess.run(
             ["gcloud", "config", "get-value", "project"],
+            capture_output=True, text=True, timeout=10,
+        )
+        val = out.stdout.strip()
+        if val and val != "(unset)":
+            return val
+    except Exception:
+        pass
+    return None
+
+
+def detect_region() -> Optional[str]:
+    """Auto-detect GCP region from metadata server or gcloud config.
+
+    The metadata server returns the instance zone (e.g. us-central1-a).
+    We strip the trailing zone letter to get the region.
+    """
+    val = _metadata_get("instance/zone")
+    if val:
+        # Returns "projects/<number>/zones/<zone>"
+        zone = val.rsplit("/", 1)[-1]
+        # Strip trailing zone letter: us-central1-a -> us-central1
+        region = zone.rsplit("-", 1)[0]
+        log.info("Detected region from GCE metadata: %s (zone: %s)", region, zone)
+        return region
+    # gcloud config as last resort
+    try:
+        out = subprocess.run(
+            ["gcloud", "config", "get-value", "compute/region"],
             capture_output=True, text=True, timeout=10,
         )
         val = out.stdout.strip()

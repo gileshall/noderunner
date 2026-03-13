@@ -1,6 +1,5 @@
 {
   "noderunner_run.project": "YOUR-PROJECT",
-  "noderunner_run.region": "us-central1",
   "noderunner_run.image": "us-docker.pkg.dev/YOUR-PROJECT/noderunner/samtools-flagstat:latest",
   "noderunner_run.mounts": [
     "your-input-bucket",
