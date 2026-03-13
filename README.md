@@ -1,34 +1,32 @@
 # noderunner
 
-Run arbitrary Docker containers on ephemeral single-node Dataproc clusters with GCS buckets
-mounted as local filesystems via gcsfuse. No Spark, no YARN — just `docker run` on hardware
-you control, accessible to anyone with Dataproc permissions.
-
-## Why it exists
-
-In Terra/Broad environments, researchers often have Dataproc permissions but not raw Compute
-Engine permissions. noderunner exploits this: it creates a single-node Dataproc cluster, mounts
-GCS buckets via gcsfuse, runs your Docker container, and tears everything down. Your container
-sees ordinary directories — no GCS SDK, no `gsutil`, no cloud-specific code needed.
+Run Docker containers on ephemeral single-node Dataproc clusters with GCS buckets mounted as
+local filesystems via gcsfuse. Your container sees ordinary directories — no GCS SDK, no
+`gsutil`, no cloud-specific code needed.
 
 ## Quick start
 
-```bash
-# 1. Build and push the file_ops example image
-docker build -t us-docker.pkg.dev/$PROJECT/noderunner/file-ops:latest examples/file_ops/
-docker push us-docker.pkg.dev/$PROJECT/noderunner/file-ops:latest
+Import `wdl/noderunner_run.wdl` from [Dockstore](https://dockstore.org) into your Terra
+workspace, then submit with an inputs JSON like this:
 
-# 2. Run it
-pip install -e cli/
-noderunner run \
-  --project $PROJECT \
-  --region us-central1 \
-  --image us-docker.pkg.dev/$PROJECT/noderunner/file-ops:latest \
-  --mount $INPUT_BUCKET \
-  --mount $OUTPUT_BUCKET \
-  --env "INPUT_BUCKET=$INPUT_BUCKET" \
-  --env "OUTPUT_BUCKET=$OUTPUT_BUCKET"
+```json
+{
+  "noderunner_run.project": "my-project",
+  "noderunner_run.region": "us-central1",
+  "noderunner_run.image": "us-docker.pkg.dev/my-project/noderunner/file-ops:latest",
+  "noderunner_run.mounts": [
+    "my-input-bucket",
+    "my-output-bucket"
+  ],
+  "noderunner_run.env_vars": [
+    "INPUT_BUCKET=my-input-bucket",
+    "OUTPUT_BUCKET=my-output-bucket"
+  ]
+}
 ```
+
+Your Docker image must be in Artifact Registry or GCR (not DockerHub) if running in a
+private subnet.
 
 ## How it works
 
@@ -58,71 +56,6 @@ Three tiers of storage are available inside your container:
 
 **Rule of thumb:** Read inputs from gcsfuse, do heavy computation on local disk, write outputs
 back to gcsfuse.
-
-## Bucket types: flat vs HNS
-
-| | Flat buckets | HNS buckets |
-|---|---|---|
-| Directory rename | Rewrites every object (slow, non-atomic) | Atomic metadata operation |
-| `--implicit-dirs` | Required | Not needed |
-| Best for | Read-only inputs, archives | Output buckets, scratch |
-
-Create an HNS bucket:
-```bash
-gcloud storage buckets create gs://my-output-bucket \
-  --location=us-central1 \
-  --enable-hierarchical-namespace
-```
-
-Signal HNS in mount specs with the `hns:` prefix: `--mount hns:my-output-bucket`
-
-## WDL reference
-
-| Input | Type | Default | Description |
-|-------|------|---------|-------------|
-| `project` | String | required | GCP project |
-| `region` | String | required | GCP region |
-| `image` | String | required | Docker image to run |
-| `mounts` | Array[String] | `[]` | GCS bucket mount specs |
-| `args` | Array[String] | `[]` | Args passed to container |
-| `output_specs` | Array[String] | `[]` | `gs://src:local_dst` output specs |
-| `machine_type` | String | `"n2-highmem-8"` | Machine type |
-| `boot_disk_gb` | Int | `500` | Boot disk size GB |
-| `local_ssds` | Int | `0` | Number of local NVMe SSDs |
-| `no_external_ip` | Boolean | `true` | Private subnet mode |
-| `max_age_minutes` | Int | `120` | Max cluster age |
-| `env_vars` | Array[String] | `[]` | `KEY=VALUE` env vars |
-| `subnet` | String? | None | Subnetwork URI |
-| `cluster_name` | String? | None | Cluster name override |
-| `custom_image` | String? | None | Pre-baked Dataproc custom image URI |
-
-## CLI reference
-
-```
-noderunner run [OPTIONS]
-```
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--project` | str | required | GCP project ID |
-| `--region` | str | required | GCP region |
-| `--image` | str | required | Docker image (Artifact Registry or GCR) |
-| `--mount` | str | (multi) | GCS bucket mount spec. Repeat for multiple. |
-| `--arg` | str | (multi) | Container argument. Repeat for multiple. |
-| `--machine-type` | str | `n2-highmem-8` | Machine type |
-| `--boot-disk-size` | int | `500` | Boot disk size GB |
-| `--boot-disk-type` | str | `pd-ssd` | Boot disk type |
-| `--local-ssd` | int | `0` | Number of local NVMe SSDs |
-| `--subnet` | str | | Subnetwork URI |
-| `--no-external-ip` | flag | `true` | Disable external IP |
-| `--max-age` | int | `120` | Cluster max age in minutes |
-| `--cluster-name` | str | | Override auto-generated name |
-| `--image-version` | str | `2.2-debian12` | Dataproc image version |
-| `--custom-image` | str | | Pre-baked Dataproc custom image URI |
-| `--env` | str | (multi) | Env var for container (`KEY=VALUE`) |
-| `--output` | str | (multi) | Output copy spec (`gs://src:local_dst`) |
-| `--staging-bucket` | str | | GCS bucket for init script staging |
-| `--dry-run` | flag | | Print commands without executing |
 
 ## Building your own workload
 
@@ -155,11 +88,78 @@ an **HNS bucket** for the output. Flat GCS buckets do not support atomic directo
 If you cannot use HNS, do all intermediate work on local disk and copy final outputs to the
 gcsfuse mount at the end.
 
+## Bucket types: flat vs HNS
+
+| | Flat buckets | HNS buckets |
+|---|---|---|
+| Directory rename | Rewrites every object (slow, non-atomic) | Atomic metadata operation |
+| `--implicit-dirs` | Required | Not needed |
+| Best for | Read-only inputs, archives | Output buckets, scratch |
+
+Create an HNS bucket:
+```bash
+gcloud storage buckets create gs://my-output-bucket \
+  --location=us-central1 \
+  --enable-hierarchical-namespace
+```
+
+Signal HNS in mount specs with the `hns:` prefix: `--mount hns:my-output-bucket`
+
 ## Examples
 
 - **[file_ops](examples/file_ops/)** — Simplest demo. Lists files, writes a probe JSON. Use to verify setup.
 - **[md5sum](examples/md5sum/)** — Compute MD5 checksums of files in a GCS bucket. Standard Unix tools treating GCS as a filesystem.
 - **[samtools_flagstat](examples/samtools_flagstat/)** — Run samtools on a BAM in GCS. Demonstrates the copy-to-local-disk pattern for multi-threaded tools.
+
+## WDL reference
+
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| `project` | String | required | GCP project |
+| `region` | String | required | GCP region |
+| `image` | String | required | Docker image to run |
+| `mounts` | Array[String] | `[]` | GCS bucket mount specs |
+| `args` | Array[String] | `[]` | Args passed to container |
+| `output_specs` | Array[String] | `[]` | `gs://src:local_dst` output specs |
+| `machine_type` | String | `"n2-highmem-8"` | Machine type |
+| `boot_disk_gb` | Int | `500` | Boot disk size GB |
+| `local_ssds` | Int | `0` | Number of local NVMe SSDs |
+| `no_external_ip` | Boolean | `true` | Private subnet mode |
+| `max_age_minutes` | Int | `120` | Max cluster age |
+| `env_vars` | Array[String] | `[]` | `KEY=VALUE` env vars |
+| `subnet` | String? | None | Subnetwork URI |
+| `cluster_name` | String? | None | Cluster name override |
+| `custom_image` | String? | None | Pre-baked Dataproc custom image URI |
+
+## CLI reference
+
+The CLI is used by the orchestrator container and can also be run directly for development/debugging.
+
+```
+noderunner run [OPTIONS]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--project` | str | required | GCP project ID |
+| `--region` | str | required | GCP region |
+| `--image` | str | required | Docker image (Artifact Registry or GCR) |
+| `--mount` | str | (multi) | GCS bucket mount spec. Repeat for multiple. |
+| `--arg` | str | (multi) | Container argument. Repeat for multiple. |
+| `--machine-type` | str | `n2-highmem-8` | Machine type |
+| `--boot-disk-size` | int | `500` | Boot disk size GB |
+| `--boot-disk-type` | str | `pd-ssd` | Boot disk type |
+| `--local-ssd` | int | `0` | Number of local NVMe SSDs |
+| `--subnet` | str | | Subnetwork URI |
+| `--no-external-ip` | flag | `true` | Disable external IP |
+| `--max-age` | int | `120` | Cluster max age in minutes |
+| `--cluster-name` | str | | Override auto-generated name |
+| `--image-version` | str | `2.2-debian12` | Dataproc image version |
+| `--custom-image` | str | | Pre-baked Dataproc custom image URI |
+| `--env` | str | (multi) | Env var for container (`KEY=VALUE`) |
+| `--output` | str | (multi) | Output copy spec (`gs://src:local_dst`) |
+| `--staging-bucket` | str | | GCS bucket for init script staging |
+| `--dry-run` | flag | | Print commands without executing |
 
 ## Permissions required
 
