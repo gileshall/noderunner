@@ -158,7 +158,6 @@ class NoderunnerCluster:
             "gcloud", "dataproc", "clusters", "create", self.name,
             "--single-node",
             "--optional-components=DOCKER",
-            "--properties=dataproc:dataproc.allow.zero.workers=true",
             f"--initialization-actions={self._init_gcs}",
             "--initialization-action-timeout=10m",
             f"--region={self.config.region}",

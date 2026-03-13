@@ -27,7 +27,6 @@ class TestBuildCreateCommand:
         assert "create" in cmd
         assert "--single-node" in cmd
         assert "--optional-components=DOCKER" in cmd
-        assert "--properties=dataproc:dataproc.allow.zero.workers=true" in cmd
         assert "--initialization-action-timeout=10m" in cmd
         assert f"--region=us-central1" in cmd
         assert f"--project=test-project" in cmd
